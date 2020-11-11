@@ -1,7 +1,7 @@
 import numpy as np
 from PIL import Image
 
-
+#下面的数据增强没用 使用的transforms
 def data_augmentation(image, mode):
     if mode == 0:
         # original

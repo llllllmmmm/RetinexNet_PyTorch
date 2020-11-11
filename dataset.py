@@ -12,7 +12,7 @@ from utils import load_images, data_augmentation
 
 
 class ImageDataset(Dataset):
-    def __init__(self, route='./data/', phase='train', patch_size=48,transforms_=None, unaligned=False, mode='train'):
+    def __init__(self, route='./data/', phase='train', patch_size=48, transforms_=None, unaligned=False, mode='train'):
         self.route = route
         self.phase = phase
         self.patch_size = patch_size
