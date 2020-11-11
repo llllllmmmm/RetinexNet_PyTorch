@@ -4,10 +4,10 @@ import torch.nn.functional as F
 
 
 def gradient(input_tensor, direction):
-    input_tensor = input_tensor.permute(0, 3, 1, 2)
+    input_tensor = input_tensor
     h, w = input_tensor.size()[2], input_tensor.size()[3]
 
-    smooth_kernel_x = torch.reshape(torch.Tensor([[0., 0.], [-1., 1.]]), (1, 1, 2, 2))
+    smooth_kernel_x = torch.reshape(torch.Tensor([[0., 0.], [-1., 1.]]), (1, 1, 2, 2)).to(input_tensor.device)
     smooth_kernel_y = smooth_kernel_x.permute(0, 1, 3, 2)
 
     assert direction in ['x', 'y']
@@ -19,18 +19,17 @@ def gradient(input_tensor, direction):
     out = F.conv2d(input_tensor, kernel, padding=(1, 1))
     out = torch.abs(out[:, :, 0:h, 0:w])
 
-    return out.permute(0, 2, 3, 1)
+    return out
 
 
 def ave_gradient(input_tensor, direction):
-    return (F.avg_pool2d(gradient(input_tensor, direction).permute(0, 3, 1, 2), 3, stride=1, padding=1))\
-        .permute(0, 2, 3, 1)
+    return (F.avg_pool2d(gradient(input_tensor, direction), 3, stride=1, padding=1))        
 
 
 def smooth(input_l, input_r):
-    rgb_weights = torch.Tensor([0.2989, 0.5870, 0.1140])
-    input_r = torch.tensordot(input_r, rgb_weights, dims=([-1], [-1]))
-    input_r = torch.unsqueeze(input_r, -1)
+    rgb_weights = torch.Tensor([0.2989, 0.5870, 0.1140]).to(input_r.device)
+    input_r = torch.tensordot(input_r, rgb_weights, dims=([1], [-1]))
+    input_r = torch.unsqueeze(input_r, 1)
 
     return torch.mean(
         gradient(input_l, 'x') * torch.exp(-10 * ave_gradient(input_r, 'x')) +
@@ -44,8 +43,11 @@ class DecomLoss(nn.Module):
         super(DecomLoss, self).__init__()
 
     def forward(self, r_low, l_low, r_high, l_high, input_low, input_high):
-        l_low_3 = torch.cat((l_low, l_low, l_low), -1)
-        l_high_3 = torch.cat((l_high, l_high, l_high), -1)
+        #print('xy',input_low.shape)
+        l_low_3 = torch.cat((l_low, l_low, l_low), 1)
+        # print(l_low_3.shape)
+        # print(r_low.shape)
+        l_high_3 = torch.cat((l_high, l_high, l_high), 1)
 
         recon_loss_low = torch.mean(torch.abs(r_low * l_low_3 - input_low))
         recon_loss_high = torch.mean(torch.abs(r_high * l_high_3 - input_high))
